@@ -67,8 +67,8 @@ sequenceDiagram
   participant P as Postgres
   participant O as Ollama
 
-  C->>A: POST /chat {session_id, message}
-  A->>R: HINCRBY session:&lt;id&gt; turns
+  C->>A: POST /chat (session_id, message)
+  A->>R: HINCRBY session:id turns
   A->>FE: embed(message)
   FE-->>A: 384-d vector
   A->>Q: similarity_search(vector, k=4)
