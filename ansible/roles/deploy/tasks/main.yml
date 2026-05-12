@@ -1,0 +1,85 @@
+---
+- name: Wait for cloud-init to finish (avoids SSH resets mid-playbook)
+  ansible.builtin.command: cloud-init status --wait
+  changed_when: false
+  retries: 3
+  delay: 10
+  register: cloud_init_status
+  until: cloud_init_status.rc == 0
+  failed_when: false
+
+- name: Wait for apt lock to be released
+  ansible.builtin.shell: |
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+          fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+          fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+      sleep 5
+    done
+  changed_when: false
+
+- name: Install Docker and Compose plugin
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - docker.io
+      - docker-compose-v2
+    state: present
+
+- name: Ensure Docker is running
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create app directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy application source
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/../app/"
+    dest: "{{ app_dir }}/app/"
+    delete: true
+    rsync_opts:
+      - "--exclude=__pycache__"
+      - "--exclude=.venv"
+
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ app_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Render environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    mode: "0600"
+
+- name: Build app image
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    build: always
+    state: present
+    pull: missing
+  register: compose_up
+
+- name: Wait for /health to return 200
+  ansible.builtin.uri:
+    url: "http://localhost:8000/health"
+    status_code: 200
+  register: health
+  retries: 60
+  delay: 5
+  until: health.status == 200
+
+- name: Print public URL
+  ansible.builtin.debug:
+    msg: |
+      App is live. Try it with:
+
+        curl http://{{ ansible_host }}:8000/chat \
+          -H "Content-Type: application/json" \
+          -d '{"session_id":"demo","message":"What is this app?"}'

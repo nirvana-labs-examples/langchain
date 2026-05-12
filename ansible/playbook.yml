@@ -1,0 +1,12 @@
+---
+- name: Deploy LangChain RAG agent (Ollama-backed, fully self-hosted)
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    ollama_model: "{{ lookup('env', 'OLLAMA_MODEL') | default('qwen2.5:3b-instruct', true) }}"
+    app_dir:      /opt/langchain-app
+
+  roles:
+    - deploy

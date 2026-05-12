@@ -1,0 +1,5 @@
+all:
+  hosts:
+    langchain-app:
+      ansible_host: REPLACE_WITH_VM_IP
+      ansible_user: ubuntu
