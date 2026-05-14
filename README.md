@@ -310,3 +310,7 @@ terraform destroy
 - [Ollama Documentation](https://github.com/ollama/ollama/tree/main/docs)
 - [Nirvana Labs Documentation](https://docs.nirvanalabs.io)
 - [Nirvana Terraform Provider](https://registry.terraform.io/providers/nirvana-labs/nirvana/latest)
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE.md).
